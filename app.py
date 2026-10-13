@@ -155,7 +155,10 @@ def main():
     args = parser.parse_args()
     if args.command == "collect":
         report = collect_report(scheduled=args.scheduled)
-        print(json.dumps({"id": report["id"], "items": len(report["items"]), "sources": report["source_success"], "total": report["source_total"], "warnings": report["warnings"]}, ensure_ascii=True))
+        summary = json.dumps({"id": report["id"], "created": report["created"], "items": len(report["items"]), "sources": report["source_success"], "total": report["source_total"], "warnings": report["warnings"]}, ensure_ascii=True)
+        if args.scheduled:
+            (ROOT / "data" / "scheduled-last.log").write_text(summary + "\n", encoding="utf-8")
+        print(summary)
         return 0 if report["source_success"] else 1
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{server.server_port}"
