@@ -1,0 +1,8 @@
+data/
+config.local.json
+__pycache__/
+*.pyc
+.env
+.venv/
+work/
+*.log

@@ -1,0 +1,18 @@
+{
+  "timezone": "Asia/Shanghai",
+  "update_hour": 0,
+  "max_items": 10,
+  "translation_enabled": true,
+  "translation_daily_chars": 4000,
+  "sources": [
+    {"id":"ifanr","name":"爱范儿","url":"https://www.ifanr.com/feed","language":"zh","kind":"科技媒体","focus":["ai","business"],"enabled":true},
+    {"id":"sspai","name":"少数派","url":"https://sspai.com/feed","language":"zh","kind":"工具与创作者社区","focus":["creator","business"],"enabled":true},
+    {"id":"openai","name":"OpenAI","url":"https://openai.com/news/rss.xml","language":"en","kind":"官方动态","focus":["ai"],"enabled":true},
+    {"id":"huggingface","name":"Hugging Face","url":"https://huggingface.co/blog/feed.xml","language":"en","kind":"官方技术博客","focus":["ai"],"enabled":true},
+    {"id":"google-ai","name":"Google AI","url":"https://blog.google/technology/ai/rss/","language":"en","kind":"官方动态","focus":["ai"],"enabled":true},
+    {"id":"youtube-blog","name":"YouTube 官方博客","url":"https://blog.youtube/rss/","language":"en","kind":"官方创作者动态","focus":["creator"],"enabled":true},
+    {"id":"buffer","name":"Buffer","url":"https://buffer.com/resources/rss/","language":"en","kind":"内容运营实践","focus":["creator","business"],"enabled":true},
+    {"id":"socialmediaexaminer","name":"Social Media Examiner","url":"https://www.socialmediaexaminer.com/feed/","language":"en","kind":"营销实践媒体","focus":["creator","business"],"enabled":true},
+    {"id":"36kr","name":"36 氪","url":"https://36kr.com/feed","language":"zh","kind":"商业媒体","focus":["ai","business"],"enabled":false,"disabled_reason":"首次验证返回非 RSS 内容，暂时停用；确认恢复后可重新启用。"}
+  ]
+}
