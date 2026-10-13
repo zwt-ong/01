@@ -271,7 +271,7 @@ def opportunity_cards(items):
 
 
 def report_markdown(report):
-    lines = [f"# 机会雷达 · {report['label']}", "", f"覆盖：{report['start']} 至 {report['end']}（北京时间）", "", "排序依据：兴趣相关度和发布时间，未获取全平台热度。", ""]
+    lines = [f"# 01 · {report['label']}", "", f"覆盖：{report['start']} 至 {report['end']}（北京时间）", "", "排序依据：兴趣相关度和发布时间，未获取全平台热度。", ""]
     for item in report["items"]:
         lines += [f"## {item['title_zh']}", "", item["excerpt_zh"] or "订阅源未提供摘要，请阅读原文。", "", f"来源：[{item['source_name']}]({item['url']}) · {item['published']}", ""]
         if item["language"] == "en":

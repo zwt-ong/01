@@ -146,7 +146,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="机会雷达：免费、本地、可追溯的每日资讯与机会观察")
+    parser = argparse.ArgumentParser(description="01：免费、本地、可追溯的每日资讯与机会观察")
     parser.add_argument("command", nargs="?", choices=["serve", "collect"], default="serve")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--scheduled", action="store_true", help="生成北京时间上一自然日的日报")
@@ -162,7 +162,7 @@ def main():
         return 0 if report["source_success"] else 1
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{server.server_port}"
-    print(f"Opportunity Radar: {url}", flush=True)
+    print(f"01: {url}", flush=True)
     if not args.no_scheduler:
         threading.Thread(target=scheduler, daemon=True).start()
     if not args.no_browser:

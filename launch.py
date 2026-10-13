@@ -25,7 +25,7 @@ def radar_status(url):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Start Opportunity Radar in the background")
+    parser = argparse.ArgumentParser(description="Start 01 in the background")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
@@ -61,7 +61,7 @@ def main():
         else:
             print("Startup timed out. See data/server.log.")
             return 1
-    print(f"Opportunity Radar is running: {url}")
+    print(f"01 is running: {url}")
     if not args.no_browser:
         try:
             webbrowser.open(url)
