@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e493b">
+  <title>机会雷达 · 先看到变化，再验证机会</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="机会雷达首页"><img src="/icon.svg" alt="" width="42" height="42"><span>机会雷达<small>OPPORTUNITY RADAR</small></span></a>
+    <div class="side-label">你的信息工作台</div>
+    <nav aria-label="主导航">
+      <button class="nav-item active" data-view="dashboard"><span class="nav-icon">◎</span>今日雷达<span class="nav-arrow">↗</span></button>
+      <button class="nav-item" data-view="history"><span class="nav-icon">▤</span>历史日报</button>
+      <button class="nav-item" data-view="saved"><span class="nav-icon">☆</span>我的观察<span id="saved-count" class="nav-count">0</span></button>
+      <button class="nav-item" data-view="sources"><span class="nav-icon">⌘</span>信息源与设置</button>
+    </nav>
+    <div class="side-focus"><span class="side-label">关注方向</span><div><i></i>商业机会</div><div><i></i>AI 新动态</div><div><i></i>个人 IP 与创作</div></div>
+    <div class="side-bottom"><span class="status-dot"></span>本地运行 · 数据留在你的电脑<small>每日 00:00 更新 · 北京时间</small><span class="version">V0.1 / 从信号到行动</span></div>
+  </aside>
+  <main>
+    <header class="topbar"><div><span class="topbar-label">个人情报工作台</span><span id="clock"></span></div><span class="local-tag">● 免费版</span></header>
+    <div class="main-inner">
+      <section class="page-heading"><div><div class="eyebrow">YOUR NEXT MOVE STARTS HERE</div><h1 id="page-title">先看到变化，再验证机会。</h1><p id="page-subtitle">把 AI、创作与商业信号，整理成值得你行动的线索。</p></div><button id="refresh" class="button primary"><span>↻</span><span id="refresh-label">更新日报</span></button></section>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <div id="content"><div class="empty loading">正在读取你的雷达…</div></div>
+      <footer class="footer"><span>每条内容都有出处，每个机会都需要验证。</span><span>先发现 · 再判断 · 小步试验</span></footer>
+    </div>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="manual-dialog"><form id="manual-form"><div class="dialog-heading"><h2>添加一条观察</h2><button type="button" data-close="manual-dialog" class="icon-button" aria-label="关闭">×</button></div><p class="muted">把抖音、TikTok、YouTube 或其他平台的链接加入观察。内容由你提供，系统不会自动读取视频。</p><label>标题<input name="title" maxlength="240" required placeholder="这条内容发生了什么？"></label><label>原文链接<input name="url" type="url" required placeholder="https://…"></label><label>你的摘录或备注<textarea name="excerpt" maxlength="220" rows="3" placeholder="记录具体变化或用户需求，最多 220 字"></textarea></label><label>发布时间（北京时间，可留空）<input name="published" type="datetime-local"></label><p class="muted small">留空会记录为添加时间，不视为已核实的原始发布时间。</p><button type="submit" class="button primary full">加入我的观察</button></form></dialog>
+  <dialog id="note-dialog"><form id="note-form"><div class="dialog-heading"><h2>记录验证结果</h2><button type="button" data-close="note-dialog" class="icon-button" aria-label="关闭">×</button></div><p id="note-title" class="muted"></p><input type="hidden" name="id"><label>我的观察<textarea name="note" maxlength="2000" rows="6" placeholder="联系了谁？对方遇到什么问题？是否愿意试用或付费？下一步是什么？"></textarea></label><p class="muted small">这些记录只保存在本地，不会上传到 GitHub。</p><button type="submit" class="button primary full">保存记录</button></form></dialog>
+</body>
+</html>
