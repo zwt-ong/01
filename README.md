@@ -4,6 +4,8 @@
 
 界面采用黑白与灰阶配色，桌面、网页标志和浏览器图标统一为“01”。
 
+[GitHub 源代码](https://github.com/zwt-ong/01) · [自动检查](https://github.com/zwt-ong/01/actions/workflows/checks.yml)
+
 第一版的验收目标是自动生成一份有来源、可查看、可导出的中文日报。机会卡是待验证的商业假设，不代表收益预测。
 
 ## 启动
