@@ -6,8 +6,8 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-python app.py serve
+python launch.py
 if errorlevel 1 (
-  echo Could not start. If port 8765 is occupied, open http://127.0.0.1:8765 or run python app.py --port 8766
+  echo Could not start. See data/server.log or run python launch.py --port 8766
   pause
 )
