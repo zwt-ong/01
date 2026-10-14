@@ -2,7 +2,7 @@
 
 一个在本地运行的信息工作台：发现最近 7 天个人创作者提出的新想法，关注 AI、个人 IP、创业，也保留跨领域的方法和实践。界面延续 01 黑白主题。
 
-[GitHub 源代码](https://github.com/zwt-ong/01) · [自动检查](https://github.com/zwt-ong/01/actions/workflows/checks.yml) · [配置指南](docs/SETUP.md)
+[GitHub 源代码](https://github.com/zwt-ong/01) · [自动检查](https://github.com/zwt-ong/01/actions/workflows/checks.yml) · [配置指南](docs/SETUP.md) · [API 与本地模型入门](docs/API_AND_MODELS.md)
 
 ## 0.2 的变化
 
