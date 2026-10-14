@@ -45,7 +45,7 @@ document.addEventListener("click",async event=>{
     }
     if(button.id==="analyze-review"){
       const value=reviewValues();if(!value.primary_confirmed||!value.creator||value.body.length<250)throw new Error("先确认作者和本人原作，补充至少 250 字符原文或字幕。");
-      button.disabled=true;$("#review-progress").textContent="本地模型正在整理，最多等待约 90 秒…";
+      button.disabled=true;$("#review-progress").textContent="本地模型正在整理并复核原文，首次加载可能较慢…";
       try{const result=await api("/api/review",{...value,action:"analyze"});fillReview(result.review);$("#review-progress").textContent="模型整理已保存为待核对。请阅读六字段，再点击底部确认。";await load(false);}finally{button.disabled=false;}
     }
   }catch(error){toast(error.message);if(button.id==="analyze-review")$("#review-progress").textContent=error.message;button.disabled=false;}

@@ -74,6 +74,46 @@ class EvidenceTests(unittest.TestCase):
                 ideas.analyze(sample(),"测试原文"*100,{"local_model":"custom"})
             self.assertEqual(request.call_count,1)
 
+    def test_field_descriptions_are_not_a_viewpoint(self):
+        value=valid_analysis()
+        for field,text in [("claim","核心观点"),("novelty","相对常见说法的差异"),("evidence","作者给出的依据或实践与不足")]:
+            with self.assertRaises(ValueError):
+                ideas.validate_analysis({**value,field:text},value["quote"])
+
+    def test_long_input_omission_is_explicit_and_quotes_are_original(self):
+        body="作者的首句说明方法可用于对照实验。"+"中间很长的原始文字"*600+"最后提醒仍需验证效果。"
+        text,truncated=ideas.analysis_text(body)
+        self.assertTrue(truncated)
+        self.assertIn("中间内容未输入模型",text)
+        self.assertIn("作者的首句",text)
+        self.assertIn("最后提醒",text)
+        for quote in ideas.evidence_sentences(text):
+            self.assertIn(quote,body)
+
+    def test_matching_quote_does_not_override_failed_consistency_check(self):
+        value=valid_analysis()
+        value['claim']='作者全程未使用键盘'
+        body=(value['quote']+' 作者后来使用键盘修改和复核。')*20
+        replies=[{}, {'message': {'content':json.dumps(value)},'done_reason':'stop'},
+                 {'message': {'content':json.dumps({'supported':False,'issues':'原文描述了后续键盘复核'})},'done_reason':'stop'}]
+        with patch.object(ideas,'request_json',side_effect=replies):
+            with self.assertRaisesRegex(ValueError,'一致性复核'):
+                ideas.analyze(sample(),body,{})
+
+    def test_existing_runtime_is_reused_without_spawning(self):
+        status={'available':True,'models':['qwen3:4b'],'message':'connected'}
+        with patch.object(ideas,'model_status',return_value=status),patch.object(ideas.subprocess,'Popen') as spawn:
+            self.assertEqual(ideas.ensure_model_service(),status)
+            spawn.assert_not_called()
+
+    def test_occupied_model_port_does_not_launch_another_service(self):
+        status={'available':False,'models':[],'message':'offline'}
+        with patch.object(ideas,'model_status',return_value=status),patch.object(ideas.socket,'create_connection'),patch.object(ideas.subprocess,'Popen') as spawn:
+            result=ideas.ensure_model_service()
+            self.assertFalse(result['available'])
+            self.assertIn('占用',result['message'])
+            spawn.assert_not_called()
+
 
 class DatabaseTests(unittest.TestCase):
     def setUp(self):
