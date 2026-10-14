@@ -4,6 +4,17 @@
 
 [GitHub 源代码](https://github.com/zwt-ong/01) · [自动检查](https://github.com/zwt-ong/01/actions/workflows/checks.yml) · [配置指南](docs/SETUP.md) · [API 与本地模型入门](docs/API_AND_MODELS.md)
 
+## 0.3 中文平台作品收集
+
+新增左侧“抖音 / B站”工作台，围绕 vibe coding、AI 编程复盘和独立开发实践配置中文搜索入口与参考作者主页。
+
+- 粘贴作品分享文案或链接即可加入观察。B站作品可尝试读取标题、上传者、原始时间和时长；短链接的跳转限制在对应平台内。
+- 抖音暂支持作品链接收集。读取不到原始时间时明确标记待补，不把添加时间当作发布时间。
+- 保留首次发现、私人笔记和现有原文整理流程；平台自制标记不替代本人原作确认。
+- 搜索结果在对应平台打开，作者主页供用户查看。**后台自动追新及自动全站发现尚未接通。**
+
+详细步骤和当前限制见 [抖音 / B站工作台](docs/CHINESE_PLATFORMS.md)。
+
 ## 0.2 的变化
 
 原来的媒体、营销资讯订阅默认停用。先发现本人原作候选，再阅读证据和整理观点。每张卡包含：**谁提出 → 核心观点 → 有什么新意 → 依据或实践经历 → 原始时间与链接 → 可以怎样验证或使用**。
@@ -16,7 +27,7 @@
 - 标题和视频简介留在候选，不冒充完整观点。模型引文必须存在于输入文本；输出仍标记待人工核对。
 - 作者屏蔽可撤销；历史日报、收藏、验证笔记、搜索、方向筛选和 Markdown 导出保留。
 
-**当前尚未完成的覆盖：** 抖音、B站、小红书没有自动采集；YouTube 搜索不提供视频字幕。可手动添加本人原作和字幕。关键词筛选不是全网搜索覆盖，也不能保证准确识别所有原创或广告。
+**当前尚未完成的覆盖：** 抖音和B站没有后台自动作者追新或全站发现；B站单条作品资料可尝试读取，小红书仍为手动原作链接。各视频平台的字幕尚未自动获取。关键词筛选不是全网搜索覆盖，也不能保证准确识别所有原创或广告。
 
 ## 启动与更新
 
@@ -70,6 +81,7 @@ python app.py collect --scheduled
 python -m unittest discover -s tests -v
 node --check web/app.js
 node --check web/ideas-ui.js
+node --check web/platforms-ui.js
 node tests/frontend-smoke.cjs
 ```
 
@@ -79,6 +91,7 @@ node tests/frontend-smoke.cjs
 app.py                    本地服务、接口、定时器
 radar/core.py             历史兼容、数据库、翻译
 radar/ideas.py            原作发现、筛选、证据核对、本地模型
+radar/platforms.py        中文平台搜索入口、作者主页、分享导入
 web/                      黑白界面、候选、观点编辑和设置
 config.example.json       可公开的默认配置，无凭证
 config.local.json         私人配置，Git 忽略

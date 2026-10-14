@@ -7,7 +7,7 @@ const document={addEventListener(){},querySelector(selector){if(!nodes.has(selec
 const pending={id:'pending',title:'<script>alert(1)</script>',title_zh:'测试标题',url:'https://example.com/original',creator:'<img onerror=alert(1)>',platform:'个人博客',tags:['cross'],excerpt:'只有来源摘录',published:'2026-10-13T12:00:00+08:00',first_seen:'2026-10-14T12:00:00+08:00',analysis_status:'待整理'};
 const fixture={report:{profile:'creator-ideas-v2',id:'test',items:[pending],opportunities:[],candidate_count:1,excluded:{},start:'2026-10-07T12:00:00+08:00',end:'2026-10-14T12:00:00+08:00',warnings:[],source_status:[]},history:[],saved:[],sources:[],blocked_creators:[],settings:{translation_enabled:false},discovery:{configured:true,enabled:true,queries:['AI experiment']},analysis:{enabled:false,model:'qwen3:4b'},job:{running:false},now:'2026-10-14T12:00:00+08:00',token:'fixture'};
 const context=vm.createContext({document,console,Intl,Date,URLSearchParams,setTimeout,clearTimeout,fetch:async()=>({ok:true,json:async()=>fixture})});
-for(const name of ['ideas-ui.js','app.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','web',name),'utf8'),context);
+for(const name of ['ideas-ui.js','platforms-ui.js','app.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','web',name),'utf8'),context);
 setImmediate(()=>{
   assert.match(nodes.get('#content').innerHTML,/还没有完成观点整理/);
   const candidateHTML=vm.runInContext('ideasDashboard(true)',context);
@@ -23,5 +23,13 @@ setImmediate(()=>{
   assert.match(settings,/type="password"/);
   assert.match(settings,/密钥已保存在本地/);
   assert.doesNotMatch(settings,/value="TEST_SECRET/);
-  console.log('Frontend smoke checks passed: candidates, six fields, escaping, configuration.');
+  vm.runInContext(`state.platforms={capability:'后台自动追新尚未接通',queries:[{query:'vibe coding',bilibili:'https://search.bilibili.com/all?keyword=vibe',douyin:'https://www.douyin.com/search/vibe'}],creators:[{name:'<script>作者</script>',bilibili:'https://search.bilibili.com/all?keyword=test',douyin:'https://www.douyin.com/search/test'}]}`,context);
+  const platformHTML=vm.runInContext('platformsView()',context);
+  assert.match(platformHTML,/后台自动追新尚未接通/);
+  assert.match(platformHTML,/platform-import-form/);
+  assert.match(platformHTML,/&lt;script&gt;作者/);
+  assert.doesNotMatch(platformHTML,/<script>作者/);
+  vm.runInContext('view="platforms";renderPage()',context);
+  assert.match(nodes.get('#content').innerHTML,/收集抖音/);
+  console.log('Frontend smoke checks passed: candidates, six fields, escaping, configuration, platform workbench.');
 });

@@ -10,6 +10,8 @@
   "youtube_api_key": "",
   "local_model_enabled": false,
   "local_model": "qwen3:4b",
+  "platform_queries": ["vibe coding", "AI编程 复盘", "独立开发 实战"],
+  "creator_watchlist": [],
   "discovery_queries": ["AI 我的实验 新方法", "人工智能 个人 创业 实践", "个人IP 我的方法", "新观点 为什么 实践", "AI my experiment lessons", "creator business how I built"],
   "sources": [
     {"id":"simon-essays","name":"Simon Willison · 个人文章","creator":"Simon Willison","url":"https://simonwillison.net/atom/entries/","language":"en","kind":"个人原始博客","role":"personal","focus":[],"enabled":true},

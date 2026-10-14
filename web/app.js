@@ -62,7 +62,7 @@ function legacySourcesView() {
   return `<div class="view-top"><p>优先稳定、公开的信息源。关闭来源后，下次更新生效。</p></div><div class="sources-grid">${state.sources.map(source=>`<article class="source-card"><div class="source-card-top"><h3>${h(source.name)}</h3><label class="toggle"><input type="checkbox" data-source="${h(source.id)}" aria-label="启用${h(source.name)}" ${source.enabled?"checked":""}><span></span></label></div><p>${h(source.kind)} · ${source.language==="en"?"英文 → 中文":"中文"}</p><a href="${h(source.url)}" target="_blank" rel="noopener noreferrer">查看公开订阅源 ↗</a><div class="source-result ${source.status?.ok===false?"error":""}">${!source.enabled?h(source.disabled_reason||"已停用"):source.status?source.status.ok?`采集成功 · ${source.status.count} 条可用内容 · ${h(date(source.status.checked_at))}`:`暂不可用 · ${h(source.status.message)}`:"尚未采集"}</div></article>`).join("")}</div><section class="paper settings-panel"><div class="settings-row"><div><strong>免费英文翻译</strong><p>英文标题与短摘录会发送给 MyMemory 公共翻译服务；本地每日最多使用 4,000 字符。失败或额度不足时保留原文。</p></div><label class="toggle"><input type="checkbox" id="translation-toggle" aria-label="启用免费英文翻译" ${state.settings.translation_enabled?"checked":""}><span></span></label></div></section><section class="paper settings-panel"><strong>当前版本的覆盖范围</strong><p class="muted">已接入公开资讯订阅源与 YouTube 官方博客；尚未自动搜索 YouTube 视频，也未接入抖音、TikTok 热榜。你可以先手动添加这些平台的链接。</p><p class="muted">摘要来自订阅源短摘录，没有调用大模型。排序依据是兴趣相关度与发布时间；不会把它称为全网热度排名。</p><p class="muted">个人配置、收藏、验证笔记和日报保存在本地，均已从 GitHub 提交范围排除。</p></section>`;
 }
 function renderPage() {
-  const headings = {dashboard:["谁提出了一个值得尝试的新想法？","从本人原作出发，保留依据，再判断能否实践。"],candidates:["先发现，再读懂。","最近 7 天发布 · 今日首次发现单独标记 · 标题不等于观点。"],history:["让变化留下轨迹。","回看过去的日报，识别持续出现的信号。"],saved:["值得观察的，值得验证。","参考样本、观点卡与验证记录都留在这里。"],sources:["好判断，从好来源开始。","配置个人原作、自动发现与本地模型。"]};
+  const headings = {platforms:["从熟悉的平台找原作。","围绕 vibe coding、AI 编程实践与产品验证，先收集，再读懂。"],dashboard:["谁提出了一个值得尝试的新想法？","从本人原作出发，保留依据，再判断能否实践。"],candidates:["先发现，再读懂。","最近 7 天发布 · 今日首次发现单独标记 · 标题不等于观点。"],history:["让变化留下轨迹。","回看过去的日报，识别持续出现的信号。"],saved:["值得观察的，值得验证。","参考样本、观点卡与验证记录都留在这里。"],sources:["好判断，从好来源开始。","配置个人原作、自动发现与本地模型。"]};
   $("#page-title").textContent=headings[view][0];$("#page-subtitle").textContent=headings[view][1];
   document.querySelectorAll(".nav-item").forEach(button=>{const active=button.dataset.view===view;button.classList.toggle("active",active);button.setAttribute("aria-current",active?"page":"false");});
   $("#saved-count").textContent=state.saved.length;
@@ -78,7 +78,7 @@ function renderPage() {
     if(state.report.translation_error)notices.push('<div class="notice warn">免费翻译暂不可用，部分英文内容保留原文。</div>');
   }
   $("#notice").innerHTML=notices.join("");
-  $("#content").innerHTML=({dashboard,candidates:()=>ideasDashboard(true),history:historyView,saved:savedView,sources:sourcesView}[view])();
+  $("#content").innerHTML=({dashboard,candidates:()=>ideasDashboard(true),history:historyView,saved:savedView,sources:sourcesView,platforms:platformsView}[view])();
 }
 document.addEventListener("click",async(event)=>{
   const button=event.target.closest("button,a[data-view]");if(!button)return;

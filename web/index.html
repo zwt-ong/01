@@ -8,7 +8,8 @@
   <link rel="icon" href="/icon.svg?v=01" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css?v=02">
   <script defer src="/ideas-ui.js"></script>
-  <script defer src="/app.js"></script>
+  <script defer src="/platforms-ui.js?v=03"></script>
+  <script defer src="/app.js?v=03"></script>
 </head>
 <body>
   <aside class="sidebar">
@@ -17,12 +18,13 @@
     <nav aria-label="主导航">
       <button class="nav-item active" data-view="dashboard"><span class="nav-icon">◎</span>今日雷达<span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="candidates"><span class="nav-icon">↗</span>发现候选</button>
+      <button class="nav-item" data-view="platforms"><span class="nav-icon">＋</span>抖音 / B站</button>
       <button class="nav-item" data-view="history"><span class="nav-icon">▤</span>历史日报</button>
       <button class="nav-item" data-view="saved"><span class="nav-icon">☆</span>我的观察<span id="saved-count" class="nav-count">0</span></button>
       <button class="nav-item" data-view="sources"><span class="nav-icon">⌘</span>信息源与设置</button>
     </nav>
-    <div class="side-focus"><span class="side-label">关注方向</span><div><i></i>AI 与个人实践</div><div><i></i>个人 IP 与创业</div><div><i></i>跨领域的新观点</div></div>
-    <div class="side-bottom"><span class="status-dot"></span>本地运行 · 数据留在你的电脑<small>每日 00:00 更新 · 北京时间</small><span class="version">V0.2 / 从原作到观点</span></div>
+    <div class="side-focus"><span class="side-label">关注方向</span><div><i></i>Vibe coding 与个人实践</div><div><i></i>个人 IP 与创业</div><div><i></i>跨领域的新观点</div></div>
+    <div class="side-bottom"><span class="status-dot"></span>本地运行 · 数据留在你的电脑<small>每日 00:00 更新 · 北京时间</small><span class="version">V0.3 / 中文原作收集</span></div>
   </aside>
   <main>
     <header class="topbar"><div><span class="topbar-label">个人情报工作台</span><span id="clock"></span></div><span class="local-tag">● 免费版</span></header>

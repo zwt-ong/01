@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from radar.core import ROOT, collect_report, config, connection, get_report, now, report_list, report_markdown, save_config, saved_items, add_manual
-from radar import ideas
+from radar import ideas, platforms
 
 JOB = {"running": False, "message": "尚未更新", "error": ""}
 JOB_LOCK = threading.Lock()
@@ -89,6 +89,7 @@ class Handler(BaseHTTPRequestHandler):
                               "settings": {k: cfg[k] for k in ("timezone", "update_hour", "max_items", "translation_enabled")},
                               "discovery": {"enabled": cfg.get("youtube_discovery_enabled", False), "configured": bool(cfg.get("youtube_api_key")), "queries": cfg.get("discovery_queries", [])},
                               "analysis": {"enabled": cfg.get("local_model_enabled", False), "model": cfg.get("local_model", "qwen3:4b")},
+                              "platforms": platforms.workbench(cfg),
                               "blocked_creators": [{"id": row[0]} for row in self.blocked()],
                               "job": dict(JOB), "token": TOKEN, "now": now().isoformat()})
         if path.path == "/api/model-status":
@@ -102,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
             if not report:
                 return self.send({"error": "暂无可导出的日报"}, 404)
             return self.send(report_markdown(report), kind="text/markdown; charset=utf-8", attachment=f"radar-{report['id']}.md")
-        files = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/ideas-ui.js": "ideas-ui.js", "/style.css": "style.css", "/icon.svg": "icon.svg"}
+        files = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/ideas-ui.js": "ideas-ui.js", "/platforms-ui.js": "platforms-ui.js", "/style.css": "style.css", "/icon.svg": "icon.svg"}
         if path.path not in files:
             return self.send({"error": "页面不存在"}, 404)
         kinds = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml"}
@@ -134,6 +135,8 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         db.execute("INSERT INTO saved VALUES (?,?,?) ON CONFLICT(item_id) DO UPDATE SET note=excluded.note", (value["id"], str(value.get("note", ""))[:2000], now().isoformat()))
                 return self.send({"ok": True})
+            if path == "/api/platform-import":
+                return self.send(platforms.import_share(value))
             if path == "/api/manual":
                 return self.send({"item": add_manual(value)})
             if path == "/api/review":
@@ -180,6 +183,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not isinstance(queries, list) or not 1 <= len(queries) <= 6 or any(not isinstance(q, str) or not q.strip() or len(q) > 100 for q in queries):
                         raise ValueError("请提供 1～6 个搜索方向，每个不超过 100 字")
                     cfg["discovery_queries"] = queries
+                cfg.update(platforms.validate_settings(value))
                 save_config(cfg)
                 return self.send({"ok": True})
             return self.send({"error": "接口不存在"}, 404)

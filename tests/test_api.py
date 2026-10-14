@@ -119,5 +119,38 @@ class ApiTests(unittest.TestCase):
         error.exception.close()
 
 
+    def test_platform_import_retains_author_time_and_uses_private_storage(self):
+        from radar import ideas
+        result={"code":0,"data":{"bvid":"BV11HbA6dEqp","title":"TEST 我的 AI 编程复盘","desc":"个人实践", "pubdate":1788753600,"duration":108,"copyright":1,"owner":{"mid":123,"name":"TEST 作者"}}}
+        with patch.object(ideas,"request_json",return_value=result):
+            with self.request("/api/platform-import",{"share_text":"https://www.bilibili.com/video/BV11HbA6dEqp/"}) as response:
+                item=json.load(response)["item"]
+        self.assertEqual(item["platform"],"B站")
+        self.assertEqual(item["timestamp_kind"],"published")
+        self.assertFalse(item["primary_confirmed"])
+        self.assertEqual(core.saved_items()[0]["creator"],"TEST 作者")
+
+    def test_platform_import_cross_site_write_is_blocked_before_network_access(self):
+        with patch.object(app.platforms,"import_share") as importer:
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                self.request("/api/platform-import",{"share_text":"https://www.bilibili.com/video/BV11HbA6dEqp/"},{"Origin":"https://attacker.example"})
+            self.assertEqual(error.exception.code,403)
+            error.exception.close()
+            importer.assert_not_called()
+
+    def test_platform_preferences_persist_and_do_not_claim_background_discovery(self):
+        with self.request("/api/settings",{"platform_queries":["vibe coding 复盘"],"creator_watchlist":[{"name":"TEST 参考作者","bilibili_url":"https://space.bilibili.com/123"}]}) as response:
+            self.assertTrue(json.load(response)["ok"])
+        with self.request("/api/state") as response: platform=json.load(response)["platforms"]
+        self.assertEqual(platform["creators"][0]["name"],"TEST 参考作者")
+        self.assertFalse(platform["automatic_tracking"])
+        self.assertFalse(platform["automatic_discovery"])
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.request("/api/settings",{"creator_watchlist":[{"name":"TEST","bilibili_url":"https://attacker.example/"}]})
+        self.assertEqual(error.exception.code,400)
+        error.exception.close()
+        self.assertEqual(core.config()["creator_watchlist"][0]["bilibili_url"],"https://space.bilibili.com/123")
+
+
 if __name__ == "__main__":
     unittest.main()
