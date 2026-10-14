@@ -218,3 +218,18 @@ h1{font-size:23px}
 .brand img{border:1px solid #333333;border-radius:12px;background:#0a0a0a;flex-shrink:0}
 .button:focus-visible,.filter:focus-visible,.text-button:focus-visible,a:focus-visible{outline:2px solid #777777;outline-offset:4px}
 ::selection{background:#111111;color:#ffffff}
+.idea-fields{display:grid;grid-template-columns:125px minmax(0,1fr);gap:18px 22px;margin:22px 0;font-size:13px;line-height:1.8}
+.idea-fields dt{font-weight:700;color:#555}
+.idea-fields dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.idea-fields small{display:block;color:#777;font-size:11px;margin-top:6px}
+.idea-fields blockquote{margin:12px 0 0;padding:10px 16px;border-left:2px solid #999;background:#f7f7f7;font-size:12px;color:#555}
+.idea-actions{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:15px}
+.candidate-note{font-size:11px;color:#777;line-height:1.8;margin:10px 0}
+.settings-panel form{max-width:720px}
+.settings-panel h3{margin-bottom:12px}
+.check-label{display:flex;align-items:center;gap:10px;font-size:12px;margin:15px 0}
+.check-label input{width:auto;flex-shrink:0}
+.review-dialog{width:min(760px,94vw);max-width:760px;max-height:90vh}
+.review-fields{border-top:1px solid #ddd;margin-top:20px;padding-top:15px}
+select{font:inherit;padding:10px;border:1px solid #ccc;border-radius:6px;background:white;color:#111}
+@media(max-width:760px){.sidebar nav{flex-wrap:wrap}.nav-item{flex:1;min-width:80px}.idea-fields{grid-template-columns:1fr;gap:5px}.idea-fields dd{margin-bottom:15px}.idea-actions{gap:14px}}

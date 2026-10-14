@@ -77,6 +77,47 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 400)
         error.exception.close()
 
+    def test_api_key_never_returns_in_state_or_default_config(self):
+        secret = "TEST_SECRET_ONLY_LOCAL_123456789"
+        with self.request("/api/settings", {"youtube_api_key": secret, "youtube_discovery_enabled": True}) as response:
+            self.assertTrue(json.load(response)["ok"])
+        with self.request("/api/state") as response:
+            state = json.load(response)
+        self.assertTrue(state["discovery"]["configured"])
+        self.assertNotIn(secret, json.dumps(state))
+        self.assertNotIn(secret, (self.root / "config.example.json").read_text(encoding="utf-8"))
+        with self.request("/api/settings", {"youtube_api_key": ""}) as response:
+            self.assertTrue(json.load(response)["ok"])
+        self.assertFalse(core.config()["youtube_api_key"])
+
+    def test_six_fields_flow_and_reversible_block(self):
+        with self.request("/api/manual", {"title": "TEST 我的实验", "creator": "TEST 作者", "url": "https://example.com/idea"}) as response:
+            item = json.load(response)["item"]
+        quote = "先记录任务的用时，然后对比新方法的结果。"
+        body = {"id": item["id"], "creator": "TEST 作者", "primary_confirmed": True, "body": quote,
+                "claim": "先做对照测试", "novelty": "比较自己的真实任务", "evidence": "作者提供步骤，尚需重复实验", "use": "记录用时与失败率", "quote": quote, "novelty_type": "个人实验"}
+        with self.request("/api/review", body) as response:
+            result = json.load(response)["review"]
+        self.assertEqual(result["kind"], "human")
+        self.assertNotIn("body", result)
+        with self.request("/api/state") as response:
+            state = json.load(response)
+        self.assertEqual(state["saved"][0]["idea"]["claim"], body["claim"])
+        with self.request("/api/block", {"id": item["id"]}) as response:
+            self.assertTrue(json.load(response)["ok"])
+        with self.request("/api/state") as response:
+            creator_id = json.load(response)["blocked_creators"][0]["id"]
+        with self.request("/api/unblock", {"creator_id": creator_id}) as response:
+            self.assertTrue(json.load(response)["ok"])
+        with self.request("/api/state") as response:
+            self.assertEqual(json.load(response)["blocked_creators"], [])
+
+    def test_remote_model_name_is_rejected(self):
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.request("/api/settings", {"local_model": "qwen3:Cloud"})
+        self.assertEqual(error.exception.code, 400)
+        error.exception.close()
+
 
 if __name__ == "__main__":
     unittest.main()

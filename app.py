@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import secrets
 import threading
 import time
@@ -12,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from radar.core import ROOT, collect_report, config, connection, get_report, now, report_list, report_markdown, save_config, saved_items, add_manual
+from radar import ideas
 
 JOB = {"running": False, "message": "尚未更新", "error": ""}
 JOB_LOCK = threading.Lock()
@@ -41,6 +43,8 @@ def scheduler():
     while not STOP.is_set():
         try:
             target = (now() - timedelta(days=1)).date().isoformat()
+            if config().get("profile") == ideas.PROFILE:
+                target += "-ideas"
             # Daily report covers the previous Beijing calendar day. Catch up on app start.
             if not get_report(target) and not JOB["running"] and time.monotonic() - last_attempt >= 300:
                 if start_job(scheduled=True):
@@ -83,13 +87,22 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"report": get_report(query.get("report", [None])[0]), "history": report_list(), "saved": saved_items(),
                               "sources": [{**source, "status": statuses.get(source["id"])} for source in cfg["sources"]],
                               "settings": {k: cfg[k] for k in ("timezone", "update_hour", "max_items", "translation_enabled")},
+                              "discovery": {"enabled": cfg.get("youtube_discovery_enabled", False), "configured": bool(cfg.get("youtube_api_key")), "queries": cfg.get("discovery_queries", [])},
+                              "analysis": {"enabled": cfg.get("local_model_enabled", False), "model": cfg.get("local_model", "qwen3:4b")},
+                              "blocked_creators": [{"id": row[0]} for row in self.blocked()],
                               "job": dict(JOB), "token": TOKEN, "now": now().isoformat()})
+        if path.path == "/api/model-status":
+            return self.send(ideas.model_status())
+        if path.path == "/api/review":
+            with connection() as db:
+                row = db.execute("SELECT payload FROM idea_reviews WHERE item_id=?", (query.get("id", [""])[0],)).fetchone()
+            return self.send({"review": json.loads(row[0]) if row else {}})
         if path.path == "/api/export":
             report = get_report(query.get("report", [None])[0])
             if not report:
                 return self.send({"error": "暂无可导出的日报"}, 404)
             return self.send(report_markdown(report), kind="text/markdown; charset=utf-8", attachment=f"radar-{report['id']}.md")
-        files = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/style.css": "style.css", "/icon.svg": "icon.svg"}
+        files = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/ideas-ui.js": "ideas-ui.js", "/style.css": "style.css", "/icon.svg": "icon.svg"}
         if path.path not in files:
             return self.send({"error": "页面不存在"}, 404)
         kinds = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml"}
@@ -104,7 +117,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "跨站请求已拒绝"}, 403)
         try:
             length = int(self.headers.get("Content-Length", 0))
-            if length < 0 or length > 16000:
+            if length < 0 or length > 100000:
                 return self.send({"error": "请求过大"}, 413)
             value = json.loads(self.rfile.read(length) or b"{}")
             if not isinstance(value, dict):
@@ -123,6 +136,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({"ok": True})
             if path == "/api/manual":
                 return self.send({"item": add_manual(value)})
+            if path == "/api/review":
+                if JOB["running"]:
+                    return self.send({"error": "更新完成后再整理观点"}, 409)
+                return self.send({"review": ideas.save_review(value)})
+            if path == "/api/block":
+                ideas.block_creator(value)
+                return self.send({"ok": True})
+            if path == "/api/unblock":
+                with connection() as db:
+                    db.execute("DELETE FROM creator_preferences WHERE creator_id=?", (str(value.get("creator_id", ""))[:200],))
+                return self.send({"ok": True})
             if path == "/api/settings":
                 if JOB["running"]:
                     return self.send({"error": "更新完成后再修改设置"}, 409)
@@ -136,6 +160,26 @@ class Handler(BaseHTTPRequestHandler):
                     if not source:
                         raise ValueError("信息源不存在")
                     source["enabled"] = bool(value.get("enabled"))
+                for name in ("youtube_discovery_enabled", "local_model_enabled"):
+                    if name in value:
+                        if not isinstance(value[name], bool):
+                            raise ValueError("设置格式无效")
+                        cfg[name] = value[name]
+                if "youtube_api_key" in value:
+                    key = str(value["youtube_api_key"]).strip()
+                    if key and not re.fullmatch(r"[A-Za-z0-9_-]{20,150}", key):
+                        raise ValueError("API 密钥格式无效")
+                    cfg["youtube_api_key"] = key
+                if "local_model" in value:
+                    model = str(value["local_model"]).strip()
+                    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,100}", model) or "cloud" in model.lower():
+                        raise ValueError("请输入本地模型名")
+                    cfg["local_model"] = model
+                if "discovery_queries" in value:
+                    queries = value["discovery_queries"]
+                    if not isinstance(queries, list) or not 1 <= len(queries) <= 6 or any(not isinstance(q, str) or not q.strip() or len(q) > 100 for q in queries):
+                        raise ValueError("请提供 1～6 个搜索方向，每个不超过 100 字")
+                    cfg["discovery_queries"] = queries
                 save_config(cfg)
                 return self.send({"ok": True})
             return self.send({"error": "接口不存在"}, 404)
@@ -143,6 +187,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": str(error)}, 400)
         except Exception:
             return self.send({"error": "操作失败，请重试"}, 500)
+
+    def blocked(self):
+        with connection() as db:
+            return db.execute("SELECT creator_id FROM creator_preferences WHERE blocked=1").fetchall()
 
 
 def main():

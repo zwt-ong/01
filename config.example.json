@@ -1,18 +1,19 @@
 {
+  "profile": "creator-ideas-v2",
   "timezone": "Asia/Shanghai",
   "update_hour": 0,
-  "max_items": 10,
+  "lookback_days": 7,
+  "max_items": 15,
   "translation_enabled": true,
   "translation_daily_chars": 4000,
+  "youtube_discovery_enabled": true,
+  "youtube_api_key": "",
+  "local_model_enabled": false,
+  "local_model": "qwen3:4b",
+  "discovery_queries": ["AI 我的实验 新方法", "人工智能 个人 创业 实践", "个人IP 我的方法", "新观点 为什么 实践", "AI my experiment lessons", "creator business how I built"],
   "sources": [
-    {"id":"ifanr","name":"爱范儿","url":"https://www.ifanr.com/feed","language":"zh","kind":"科技媒体","focus":["ai","business"],"enabled":true},
-    {"id":"sspai","name":"少数派","url":"https://sspai.com/feed","language":"zh","kind":"工具与创作者社区","focus":["creator","business"],"enabled":true},
-    {"id":"openai","name":"OpenAI","url":"https://openai.com/news/rss.xml","language":"en","kind":"官方动态","focus":["ai"],"enabled":true},
-    {"id":"huggingface","name":"Hugging Face","url":"https://huggingface.co/blog/feed.xml","language":"en","kind":"官方技术博客","focus":["ai"],"enabled":true},
-    {"id":"google-ai","name":"Google AI","url":"https://blog.google/technology/ai/rss/","language":"en","kind":"官方动态","focus":["ai"],"enabled":true},
-    {"id":"youtube-blog","name":"YouTube 官方博客","url":"https://blog.youtube/rss/","language":"en","kind":"官方创作者动态","focus":["creator"],"enabled":true},
-    {"id":"buffer","name":"Buffer","url":"https://buffer.com/resources/rss/","language":"en","kind":"内容运营实践","focus":["creator","business"],"enabled":true},
-    {"id":"socialmediaexaminer","name":"Social Media Examiner","url":"https://www.socialmediaexaminer.com/feed/","language":"en","kind":"营销实践媒体","focus":["creator","business"],"enabled":true},
-    {"id":"36kr","name":"36 氪","url":"https://36kr.com/feed","language":"zh","kind":"商业媒体","focus":["ai","business"],"enabled":false,"disabled_reason":"首次验证返回非 RSS 内容，暂时停用；确认恢复后可重新启用。"}
+    {"id":"simon-essays","name":"Simon Willison · 个人文章","creator":"Simon Willison","url":"https://simonwillison.net/atom/entries/","language":"en","kind":"个人原始博客","role":"personal","focus":[],"enabled":true},
+    {"id":"zhangxinxu","name":"张鑫旭 · 个人实践","creator":"张鑫旭","url":"https://www.zhangxinxu.com/wordpress/feed/","language":"zh","kind":"个人原始博客","role":"personal","focus":[],"enabled":true},
+    {"id":"ethan-mollick","name":"Ethan Mollick · One Useful Thing","creator":"Ethan Mollick","url":"https://www.oneusefulthing.org/feed","language":"en","kind":"个人原始博客","role":"personal","focus":[],"enabled":true}
   ]
 }

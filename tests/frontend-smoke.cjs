@@ -1,0 +1,27 @@
+const fs=require('node:fs');
+const vm=require('node:vm');
+const assert=require('node:assert/strict');
+const path=require('node:path');
+const nodes=new Map();
+const document={addEventListener(){},querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{textContent:'',innerHTML:'',disabled:false,classList:{add(){},remove(){}},addEventListener(){}});return nodes.get(selector);},querySelectorAll(){return[];}};
+const pending={id:'pending',title:'<script>alert(1)</script>',title_zh:'测试标题',url:'https://example.com/original',creator:'<img onerror=alert(1)>',platform:'个人博客',tags:['cross'],excerpt:'只有来源摘录',published:'2026-10-13T12:00:00+08:00',first_seen:'2026-10-14T12:00:00+08:00',analysis_status:'待整理'};
+const fixture={report:{profile:'creator-ideas-v2',id:'test',items:[pending],opportunities:[],candidate_count:1,excluded:{},start:'2026-10-07T12:00:00+08:00',end:'2026-10-14T12:00:00+08:00',warnings:[],source_status:[]},history:[],saved:[],sources:[],blocked_creators:[],settings:{translation_enabled:false},discovery:{configured:true,enabled:true,queries:['AI experiment']},analysis:{enabled:false,model:'qwen3:4b'},job:{running:false},now:'2026-10-14T12:00:00+08:00',token:'fixture'};
+const context=vm.createContext({document,console,Intl,Date,URLSearchParams,setTimeout,clearTimeout,fetch:async()=>({ok:true,json:async()=>fixture})});
+for(const name of ['ideas-ui.js','app.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','web',name),'utf8'),context);
+setImmediate(()=>{
+  assert.match(nodes.get('#content').innerHTML,/还没有完成观点整理/);
+  const candidateHTML=vm.runInContext('ideasDashboard(true)',context);
+  assert.match(candidateHTML,/&lt;img onerror/);
+  assert.doesNotMatch(candidateHTML,/<img onerror/);
+  assert.doesNotMatch(candidateHTML,/<dt>核心观点<\/dt>/);
+  context.ready={...pending,idea:{status:'模型整理 · 待人工核对',claim:'<script>claim</script>',novelty:'相对差异',evidence:'样本较少',quote:'原文证据',use:'对照测试',novelty_type:'个人实验'}};
+  const cardHTML=vm.runInContext('ideaArticle(ready,0)',context);
+  for(const name of ['谁提出','核心观点','有什么新意','依据或实践经历','原始时间与链接','可以怎样验证或使用'])assert.ok(cardHTML.includes(name));
+  assert.match(cardHTML,/&lt;script&gt;claim/);
+  assert.doesNotMatch(cardHTML,/<script>claim/);
+  const settings=vm.runInContext('ideasSources()',context);
+  assert.match(settings,/type="password"/);
+  assert.match(settings,/密钥已保存在本地/);
+  assert.doesNotMatch(settings,/value="TEST_SECRET/);
+  console.log('Frontend smoke checks passed: candidates, six fields, escaping, configuration.');
+});

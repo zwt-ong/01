@@ -15,5 +15,7 @@ jobs:
           node-version: '22'
       - run: python -m unittest discover -s tests -v
       - run: node --check web/app.js
+      - run: node --check web/ideas-ui.js
+      - run: node tests/frontend-smoke.cjs
 permissions:
   contents: read

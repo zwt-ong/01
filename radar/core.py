@@ -42,6 +42,10 @@ def connection():
         CREATE TABLE IF NOT EXISTS translations (id TEXT PRIMARY KEY, translated TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS translation_usage (day TEXT PRIMARY KEY, chars INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS saved (item_id TEXT PRIMARY KEY, note TEXT NOT NULL DEFAULT '', created TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS observations (item_id TEXT PRIMARY KEY, first_seen TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS idea_reviews (item_id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS creator_preferences (creator_id TEXT PRIMARY KEY, blocked INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS discovery_cache (id TEXT PRIMARY KEY, created TEXT NOT NULL, payload TEXT NOT NULL);
     """)
     try:
         with db:
@@ -52,7 +56,17 @@ def connection():
 
 def config():
     path = ROOT / "config.local.json"
-    return json.loads((path if path.exists() else ROOT / "config.example.json").read_text(encoding="utf-8"))
+    defaults = json.loads((ROOT / "config.example.json").read_text(encoding="utf-8"))
+    if not path.exists():
+        return defaults
+    local = json.loads(path.read_text(encoding="utf-8"))
+    if defaults.get("profile") == "creator-ideas-v2" and local.get("profile") != defaults["profile"]:
+        # Upgrade source selection without enabling the previous media feeds again.
+        for key in ("translation_enabled", "translation_daily_chars", "max_items"):
+            if key in local:
+                defaults[key] = local[key]
+        return defaults
+    return {**defaults, **local}
 
 
 def save_config(value):
@@ -271,6 +285,9 @@ def opportunity_cards(items):
 
 
 def report_markdown(report):
+    if report.get("profile") == "creator-ideas-v2":
+        from radar.ideas import markdown
+        return markdown(report)
     lines = [f"# 01 · {report['label']}", "", f"覆盖：{report['start']} 至 {report['end']}（北京时间）", "", "排序依据：兴趣相关度和发布时间，未获取全平台热度。", ""]
     for item in report["items"]:
         lines += [f"## {item['title_zh']}", "", item["excerpt_zh"] or "订阅源未提供摘要，请阅读原文。", "", f"来源：[{item['source_name']}]({item['url']}) · {item['published']}", ""]
@@ -291,6 +308,9 @@ def report_markdown(report):
 
 
 def collect_report(scheduled=False, progress=None, anchor=None):
+    if config().get("profile") == "creator-ideas-v2":
+        from radar.ideas import collect
+        return collect(scheduled, progress, anchor)
     if not LOCK.acquire(blocking=False):
         raise RuntimeError("已有更新任务正在运行")
     try:
@@ -376,7 +396,11 @@ def report_list():
 def get_report(identifier=None):
     with connection() as db:
         row = db.execute("SELECT payload FROM reports WHERE id=?", (identifier,)).fetchone() if identifier else db.execute("SELECT payload FROM reports ORDER BY created DESC LIMIT 1").fetchone()
-    return json.loads(row[0]) if row else None
+    report = json.loads(row[0]) if row else None
+    if report and report.get("profile") == "creator-ideas-v2":
+        from radar.ideas import decorate
+        return decorate(report)
+    return report
 
 
 def saved_items():
@@ -387,6 +411,11 @@ def saved_items():
             item = json.loads(row[0])
             key = hashlib.sha256(("en|zh-CN|" + item["title"][:240]).encode()).hexdigest()
             translated = db.execute("SELECT translated FROM translations WHERE id=?", (key,)).fetchone()
+            review_row = db.execute("SELECT payload FROM idea_reviews WHERE item_id=?", (item["id"],)).fetchone()
+            if review_row:
+                review = json.loads(review_row[0])
+                item["idea"] = {key: value for key, value in review.items() if key not in ("body", "creator", "creator_id", "primary_confirmed")}
+                item["creator"] = review.get("creator", item.get("creator", "待核对"))
             result.append({**item, "title_zh": translated[0] if translated else item["title"], "note": row[1], "saved_at": row[2]})
         return result
 
@@ -404,7 +433,14 @@ def add_manual(value):
             "excerpt": clean(value.get("excerpt", ""), 220), "published": published.isoformat(),
             "source_id": "manual", "source_name": "手动添加", "language": "zh" if re.search(r"[\u4e00-\u9fff]", title) else "en",
             "source_kind": "用户提供 · 未核实", "source_focus": ["business"], "timestamp_kind": "provided" if supplied_date else "added"}
+    if config().get("profile") == "creator-ideas-v2":
+        creator = clean(value.get("creator", ""), 100)
+        item.update(creator=creator or "待核对", creator_id="manual:" + (creator or item["id"]), primary_confirmed=False,
+                    body_kind="用户提供摘录", platform="手动链接", first_seen=now().isoformat(), analysis_status="待补原文 / 核对作者")
     with connection() as db:
+        if item.get("first_seen"):
+            from radar.ideas import observe
+            item["first_seen"] = observe(db, item, item["first_seen"])
         db.execute("INSERT OR REPLACE INTO items VALUES (?,?,?)", (item["id"], item["published"], json.dumps(item, ensure_ascii=False)))
         db.execute("INSERT OR REPLACE INTO saved VALUES (?,?,?)", (item["id"], "手动添加，等待核实", now().isoformat()))
     return item
