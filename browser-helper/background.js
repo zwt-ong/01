@@ -1,4 +1,6 @@
 /* Resumable queue, normal pages only. No requests to platform APIs. */
+// Inject the complete function on each read; page navigation can replace the document.
+importScripts('page-reader.js');
 const BASE='http://127.0.0.1:8765';
 let busy=false;
 const day=()=>new Date(Date.now()+8*3600000).toISOString().slice(0,10);
@@ -29,7 +31,16 @@ async function start() {
   await ensureAlarm();await tick();
 }
 async function readTab(id) {
-  return (await chrome.scripting.executeScript({target:{tabId:id},func:()=>readRadarPage()}))[0].result;
+  try {
+    const frames=await chrome.scripting.executeScript({target:{tabId:id},func:readRadarPage});
+    const frame=Array.isArray(frames)?frames.find(frame=>frame?.frameId===0)||frames[0]:null;
+    const result=frame?.result;
+    if(!result||typeof result!=='object'||Array.isArray(result)||!Array.isArray(result.items))return {items:[],retryable:true,error:'网页切换或加载中，暂未返回作品资料'};
+    return result;
+  }catch(error) {
+    if(/context|frame.*removed|document.*unloaded|navigat/i.test(error.message||''))return {items:[],retryable:true,error:'网页正在切换，请等待后继续'};
+    throw error;
+  }
 }
 async function page(job,run) {
   let tab;
@@ -45,7 +56,6 @@ async function page(job,run) {
       await new Promise(r=>setTimeout(r,500));
     }
     if(!allowedUrl((await chrome.tabs.get(tab.id)).url))throw new Error('页面跳转到支持范围以外，请本人检查');
-    await chrome.scripting.executeScript({target:{tabId:tab.id},files:['page-reader.js']});
     let result;
     for(let i=0;i<5;i++) {
       result=await readTab(tab.id);
@@ -53,11 +63,11 @@ async function page(job,run) {
       if(result.items?.length)break;
       await new Promise(r=>setTimeout(r,750));
     }
-    if(job.kind!=='detail')await chrome.scripting.executeScript({target:{tabId:tab.id},func:k=>prepareRadarPage(k),args:[job.kind]});
+    if(job.kind!=='detail')await chrome.scripting.executeScript({target:{tabId:tab.id},func:prepareRadarPage,args:[job.kind]});
     for(let i=0;i<8;i++) {
       result=await readTab(tab.id);
       if(result.blocked)return {...result,tabId:tab.id};
-      if(result.items?.length)break;
+      if(result.items.length&&(job.kind!=='detail'||result.items.some(item=>item.published)))break;
       await new Promise(r=>setTimeout(r,750));
     }
     if(result.items?.length) {await chrome.tabs.remove(tab.id);delete run.activeTab;return result;}
@@ -80,11 +90,12 @@ async function tick() {
       run.phase='complete';run.message=`本轮结束：B站 ${run.counts['B站']} 条，抖音 ${run.counts['抖音']} 条带原始时间。${Object.keys(run.errors).length?'存在跳过页面。':''}请到01核对候选。`;
       await chrome.storage.local.set({run});return;
     }
+    run.current={platform:job.platform,kind:job.kind,url:job.url};
     const result=await page(job,run);
     const {cancelledId}=await chrome.storage.local.get('cancelledId');
     if(cancelledId===run.id)return;
-    if(result.blocked) {
-      run.phase='paused';run.message=result.error||'需要本人检查网页';
+    if(!result||result.blocked) {
+      run.phase='paused';run.message=`${job.platform}：${result?.error||'网页暂未返回有效资料，请稍后继续'}`;
       await chrome.storage.local.set({run});await chrome.action.setBadgeText({text:'!'});
       await api('/api/browser-status',{platform:job.platform,ok:false,count:run.counts[job.platform],message:run.message}).catch(()=>{});return;
     }
@@ -104,7 +115,8 @@ async function tick() {
       }
       run.queue.shift();
     }
-    run.message=`读取中：${job.platform}；剩余页面 ${run.queue.length+run.details.length}`;
+    const next=run.queue[0]||run.details[0];
+    run.message=`已读取：${job.platform}；下一页：${next?.platform||'整理日报'}；剩余页面 ${run.queue.length+run.details.length}`;
     await chrome.storage.local.set({run});await chrome.action.setBadgeText({text:''});
   } catch(error) {
     const {run,cancelledId}=await chrome.storage.local.get(['run','cancelledId']);
@@ -141,4 +153,4 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
 });
 chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'}).catch(()=>{});
 ensureAlarm();
-if(typeof module!=='undefined')module.exports={allowedUrl,day,tick,start,command};
+if(typeof module!=='undefined')module.exports={allowedUrl,day,tick,start,command,readTab};

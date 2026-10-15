@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "01 · 中文原作采集助手",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "用正常网页读取抖音与B站作品资料，发送到本机01。遇到验证暂停。",
   "permissions": ["storage", "alarms", "scripting"],
   "host_permissions": ["http://127.0.0.1/*", "https://search.bilibili.com/*", "https://space.bilibili.com/*", "https://www.bilibili.com/*", "https://www.douyin.com/*"],

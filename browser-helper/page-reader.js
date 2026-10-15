@@ -5,7 +5,8 @@ function readRadarPage() {
   const host = location.hostname;
   const platform = host.endsWith('.bilibili.com') ? 'B站' : host === 'www.douyin.com' ? '抖音' : '';
   if (!platform) return {error:'页面不在支持范围内',items:[]};
-  const body = document.body.innerText;
+  if(!document.body)return {items:[],retryable:true,error:'网页正在加载'};
+  const body = document.body.innerText||'';
   if (/手机刷脸验证|请完成安全验证|拖动滑块|请完成验证|验证失败|访问受限/.test(body)) return {blocked:true,error:'需要本人完成平台验证',items:[]};
   if (platform==='抖音' && /登录后即可搜索|扫码登录|验证码登录/.test(body)) return {blocked:true,error:'需要本人登录抖音',items:[]};
   const duration = s => {
@@ -35,7 +36,7 @@ function readRadarPage() {
     }
   } else if (host==='www.bilibili.com' && /^\/video\/BV/.test(location.pathname)) {
     const author=document.querySelector('.up-name');
-    const date=Array.from(document.querySelectorAll('span')).find(el=>visible(el)&&/^20\d\d-\d\d-\d\d \d\d:\d\d/.test(text(el)));
+    const date=document.querySelector('.pubdate-ip-text')||Array.from(document.querySelectorAll('span,time')).find(el=>visible(el)&&/^20\d\d-\d\d-\d\d \d\d:\d\d/.test(text(el)));
     items.push({platform,title:text(document.querySelector('h1')),url:cleanUrl(location.href),creator:text(author),creator_url:cleanUrl(author?.href),published:stamp(text(date)),excerpt:text(document.querySelector('#v_desc')).slice(0,400)});
   } else if (platform==='抖音' && location.pathname.startsWith('/search/')) {
     for (const a of document.querySelectorAll('a[href*="/video/"]')) {
