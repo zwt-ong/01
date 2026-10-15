@@ -415,8 +415,20 @@ def collect(scheduled=False, progress=None, anchor=None):
                 db.execute("INSERT OR REPLACE INTO items (id,published,payload) VALUES (?,?,?)", (row["id"], row["published"], json.dumps(row, ensure_ascii=False)))
             for status in statuses:
                 db.execute("INSERT OR REPLACE INTO source_status VALUES (?,?)", (status["id"], json.dumps(status, ensure_ascii=False)))
-            enabled = {source["id"] for source in sources} | ({"youtube-discovery"} if cfg.get("youtube_discovery_enabled", True) else set()) | {"manual"}
+            from radar import browser_bridge
+            browser_enabled = set(browser_bridge.SOURCE_IDS.values()) if browser_bridge.pairing().get("token") else set()
+            for payload in db.execute("SELECT payload FROM source_status WHERE id IN ('browser-bilibili','browser-douyin')"):
+                state = json.loads(payload[0])
+                if state["id"] in browser_enabled:
+                    checked = core.parse_date(state.get("checked"))
+                    if not checked or core.now() - checked > timedelta(hours=26):
+                        state.update(ok=False, message="浏览器采集尚未更新，显示历史缓存")
+                    statuses.append(state)
+            enabled = browser_enabled | {source["id"] for source in sources} | ({"youtube-discovery"} if cfg.get("youtube_discovery_enabled", True) else set()) | {"manual"}
             raw = [json.loads(row[0]) for row in db.execute("SELECT payload FROM items WHERE published>=? AND published<?", (start.isoformat(), end.isoformat()))]
+        for status in statuses:
+            if status["id"] in browser_enabled:
+                status["in_window"] = sum(row.get("source_id") == status["id"] and row.get("timestamp_kind") == "published" for row in raw)
         candidates, excluded = [], {}
         for row in raw:
             if row["source_id"] not in enabled:
@@ -488,7 +500,7 @@ def markdown(report):
             lines += ["可以怎样验证或使用（建议）：" + idea["use"], "", "整理状态：" + idea["status"], ""]
             if idea.get("input_scope"):
                 lines += ["阅读范围：" + idea["input_scope"], ""]
-    lines += ["## 覆盖情况", "", "抖音、B站、小红书未接入自动采集；可手动添加本人原作和字幕。", ""]
+    lines += ["## 覆盖情况", "", "抖音与B站可用本地浏览器助手采集作品资料（需安装、配对并运行浏览器，遇验证暂停）；字幕和原作身份仍待核对。小红书尚未接入自动采集。", ""]
     lines.extend("- " + message for message in report.get("warnings", []))
     for status in report["source_status"]:
         lines.append(f"- {status['name']}：{status['message']}，窗口内 {status.get('in_window', 0)} 条")

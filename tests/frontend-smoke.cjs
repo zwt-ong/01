@@ -26,6 +26,8 @@ setImmediate(()=>{
   vm.runInContext(`state.platforms={capability:'后台自动追新尚未接通',queries:[{query:'vibe coding',bilibili:'https://search.bilibili.com/all?keyword=vibe',douyin:'https://www.douyin.com/search/vibe'}],creators:[{name:'<script>作者</script>',bilibili:'https://search.bilibili.com/all?keyword=test',douyin:'https://www.douyin.com/search/test'}]}`,context);
   const platformHTML=vm.runInContext('platformsView()',context);
   assert.match(platformHTML,/后台自动追新尚未接通/);
+  assert.match(platformHTML,/生成本地配对码/);
+  assert.match(platformHTML,/尚未配对/);
   assert.match(platformHTML,/platform-import-form/);
   assert.match(platformHTML,/&lt;script&gt;作者/);
   assert.doesNotMatch(platformHTML,/<script>作者/);

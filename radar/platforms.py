@@ -207,4 +207,4 @@ def workbench(cfg):
     return {"queries": [{"query": q, **search_links(q)} for q in queries],
             "creators": [{**row, **search_links(row["name"])} for row in creators],
             "automatic_tracking": False, "automatic_discovery": False,
-            "capability": "中文搜索和作者主页在平台打开；B站作品链接可尝试读取公开资料；抖音分享先收集链接。未接通后台自动追新或全站搜索。"}
+            "capability": "中文平台支持分享收集；浏览器助手已提供测试版，可读取关键词搜索与已绑定作者作品。需先安装、配对并完成首次验收；当前页面不会自行读取平台登录状态。"}

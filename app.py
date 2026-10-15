@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import io
+import zipfile
 import json
 import re
 import secrets
@@ -13,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from radar.core import ROOT, collect_report, config, connection, get_report, now, report_list, report_markdown, save_config, saved_items, add_manual
-from radar import ideas, platforms
+from radar import ideas, platforms, browser_bridge
 
 JOB = {"running": False, "message": "尚未更新", "error": ""}
 JOB_LOCK = threading.Lock()
@@ -63,6 +65,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
+        origin = self.headers.get("Origin")
+        if urllib.parse.urlsplit(self.path).path in ("/api/browser-jobs", "/api/browser-import", "/api/browser-status", "/api/browser-finish") and origin and origin == browser_bridge.pairing().get("origin"):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -89,9 +95,13 @@ class Handler(BaseHTTPRequestHandler):
                               "settings": {k: cfg[k] for k in ("timezone", "update_hour", "max_items", "translation_enabled")},
                               "discovery": {"enabled": cfg.get("youtube_discovery_enabled", False), "configured": bool(cfg.get("youtube_api_key")), "queries": cfg.get("discovery_queries", [])},
                               "analysis": {"enabled": cfg.get("local_model_enabled", False), "model": cfg.get("local_model", "qwen3:4b")},
-                              "platforms": platforms.workbench(cfg),
+                              "platforms": {**platforms.workbench(cfg), "browser": browser_bridge.public_state()},
                               "blocked_creators": [{"id": row[0]} for row in self.blocked()],
                               "job": dict(JOB), "token": TOKEN, "now": now().isoformat()})
+        if path.path == "/api/browser-jobs":
+            if not browser_bridge.authorized(self.headers.get("X-01-Browser-Token"), self.headers.get("Origin")):
+                return self.send({"error": "浏览器助手尚未配对"}, 403)
+            return self.send(browser_bridge.jobs())
         if path.path == "/api/model-status":
             return self.send(ideas.model_status())
         if path.path == "/api/review":
@@ -103,6 +113,14 @@ class Handler(BaseHTTPRequestHandler):
             if not report:
                 return self.send({"error": "暂无可导出的日报"}, 404)
             return self.send(report_markdown(report), kind="text/markdown; charset=utf-8", attachment=f"radar-{report['id']}.md")
+        if path.path == "/browser-helper.zip":
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+                for name in ("manifest.json", "page-reader.js", "background.js", "popup.html", "popup.js", "popup.css", "README.md"):
+                    archive.write(ROOT / "browser-helper" / name, "01-browser-helper/" + name)
+            return self.send(buffer.getvalue(), kind="application/zip", attachment="01-browser-helper.zip")
+        if path.path == "/browser-helper-guide":
+            return self.send((ROOT / "browser-helper" / "README.md").read_bytes(), kind="text/plain; charset=utf-8")
         files = {"/": "index.html", "/index.html": "index.html", "/app.js": "app.js", "/ideas-ui.js": "ideas-ui.js", "/platforms-ui.js": "platforms-ui.js", "/style.css": "style.css", "/icon.svg": "icon.svg"}
         if path.path not in files:
             return self.send({"error": "页面不存在"}, 404)
@@ -110,7 +128,33 @@ class Handler(BaseHTTPRequestHandler):
         file = ROOT / "web" / files[path.path]
         return self.send(file.read_bytes(), kind=kinds[file.suffix])
 
+    def do_OPTIONS(self):
+        origin = self.headers.get("Origin")
+        if not self.valid_host() or not origin or origin != browser_bridge.pairing().get("origin") or urllib.parse.urlsplit(self.path).path not in ("/api/browser-jobs", "/api/browser-import", "/api/browser-status", "/api/browser-finish"):
+            return self.send({"error": "未配对的浏览器请求"}, 403)
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", origin)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-01-Browser-Token")
+        self.end_headers()
+
     def do_POST(self):
+        bridge_path = urllib.parse.urlsplit(self.path).path
+        if bridge_path in ("/api/browser-import", "/api/browser-status", "/api/browser-finish"):
+            if not self.valid_host() or not browser_bridge.authorized(self.headers.get("X-01-Browser-Token"), self.headers.get("Origin")):
+                return self.send({"error": "浏览器助手尚未配对"}, 403)
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                if not 0 <= length <= 100000: return self.send({"error": "请求过大"}, 413)
+                value = json.loads(self.rfile.read(length) or b"{}")
+                if not isinstance(value, dict): raise ValueError("请求格式无效")
+                if bridge_path == "/api/browser-import": return self.send(browser_bridge.ingest(value))
+                if bridge_path == "/api/browser-status": return self.send(browser_bridge.status(value))
+                return self.send({"started": start_job()}, 202)
+            except (ValueError, TypeError, KeyError) as error:
+                return self.send({"error": str(error)}, 400)
+            except Exception:
+                return self.send({"error": "浏览器资料写入失败"}, 500)
         if not self.valid_host() or self.headers.get("X-Radar-Token") != TOKEN:
             return self.send({"error": "请从本地页面操作"}, 403)
         origin = self.headers.get("Origin")
@@ -135,6 +179,8 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         db.execute("INSERT INTO saved VALUES (?,?,?) ON CONFLICT(item_id) DO UPDATE SET note=excluded.note", (value["id"], str(value.get("note", ""))[:2000], now().isoformat()))
                 return self.send({"ok": True})
+            if path == "/api/browser-pair":
+                return self.send(browser_bridge.pair(value))
             if path == "/api/platform-import":
                 return self.send(platforms.import_share(value))
             if path == "/api/manual":

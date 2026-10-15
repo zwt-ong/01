@@ -18,5 +18,9 @@ jobs:
       - run: node --check web/ideas-ui.js
       - run: node --check web/platforms-ui.js
       - run: node tests/frontend-smoke.cjs
+      - run: node --check browser-helper/background.js
+      - run: node --check browser-helper/page-reader.js
+      - run: node --check browser-helper/popup.js
+      - run: node tests/browser-helper.cjs
 permissions:
   contents: read
